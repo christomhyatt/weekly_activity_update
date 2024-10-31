@@ -6,8 +6,8 @@ import streamlit as st
 from datetime import date
 
 ## Garmin login + credentials; hide before publishing 
-email = os.getenv("GARMIN_EMAIL")
-password = os.getenv("GARMIN_PASSWORD")
+email = st.secrets["GARMIN_EMAIL"]
+password = st.secrets["GARMIN_PASSWORD"]
 garmin = garminconnect.Garmin(email, password)
 garmin.login()
 # name = garmin.display_name
