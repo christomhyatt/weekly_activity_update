@@ -42,6 +42,21 @@ activities_df['Year'] = activities_df['startTimeLocal'].dt.isocalendar().year
 activities_df['Week'] = activities_df['startTimeLocal'].dt.isocalendar().week
 activities_df['YearWeek'] = activities_df['Year'].astype(str) + '-W' + activities_df['Week'].astype(str).str.zfill(2)
 
+# Dictionary for activity type name mapping
+activity_name_mapping = {
+    'backcountry_skiing': 'BC Ski',
+    'resort_skiing': 'Resort Ski',
+    'walking': 'Walk',
+    'cycling': 'Road Bike',
+    'hiking': 'Hike',
+    'running': 'City Run',
+    'multi_sport': 'MURPH',
+    'trail_running': 'Trail Run',
+}
+
+# Map the activity types to new names
+activities_df['activityTypeKey'] = activities_df['activityTypeKey'].map(activity_name_mapping).fillna(activities_df['activityTypeKey'])
+
 # Create weekly summary with separate columns for each activity type and metric
 weekly_duration = pd.pivot_table(
     activities_df,
@@ -50,7 +65,7 @@ weekly_duration = pd.pivot_table(
     columns='activityTypeKey',
     aggfunc='sum',
     fill_value=0
-).add_suffix('_duration')
+).add_suffix(' (mins)')
 
 weekly_distance = pd.pivot_table(
     activities_df,
@@ -59,14 +74,41 @@ weekly_distance = pd.pivot_table(
     columns='activityTypeKey',
     aggfunc='sum',
     fill_value=0
-).add_suffix('_distance')
+).add_suffix(' (miles)')
 
 # Combine the duration and distance DataFrames
 weekly_summary = pd.concat([weekly_duration, weekly_distance], axis=1)
 weekly_summary = weekly_summary.fillna(0)
 
-# Display transformed data
-st.write("Weekly Summed Duration by Activity Type", weekly_summary.head())
+## Chart 
+# Reset index to make YearWeek a column
+weekly_distance_reset = weekly_distance.reset_index()
+
+# Melt pivot into dataframe for Altair
+melted_df = pd.melt(
+    weekly_distance_reset, 
+    id_vars=['YearWeek'],
+    var_name='Activity',
+    value_name='Distance'
+)
+
+# Line chart
+chart = alt.Chart(melted_df).mark_line(point=True).encode(
+    x=alt.X('YearWeek:N', title='Week', axis=alt.Axis(labelAngle=-45)),
+    y=alt.Y('Distance:Q', title='Distance (miles)'),
+    color=alt.Color('Activity:N', title='Activity Type'),
+    tooltip=['YearWeek', 'Activity', 'Distance']
+).properties(
+    width=800,
+    height=400,
+    title='Weekly Activity Distance'
+).interactive()
+
+# Display the chart
+st.altair_chart(chart, use_container_width=True)
+
+## Display Table for Duration / Distance of Activities by Week
+st.write("Weekly Summed Duration by Activity Type", weekly_summary)
 
 # Altair Bar Chart
 # chart = alt.Chart(weekly_summary).mark_bar().encode(
