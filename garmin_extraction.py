@@ -5,6 +5,12 @@ import altair as alt
 import streamlit as st
 from datetime import date
 
+
+
+# Set up the Streamlit app 
+st.title("Weekly Garmin Report")
+alt.themes.enable('dark')
+
 ## Garmin login + credentials; hide before publishing 
 email = st.secrets["GARMIN_EMAIL"]
 password = st.secrets["GARMIN_PASSWORD"]
@@ -15,8 +21,6 @@ garmin.login()
 # ## Store session information
 # GARTH_HOME = os.getenv("GARTH_HOME", "~/.garth")
 # garmin.garth.dump(GARTH_HOME)
-
-st.title("Weekly Activity Duration")
 
 ## Dates for API call
 start_date = st.date_input("Select start date", date(2024,1,1))
@@ -37,7 +41,6 @@ activities_df['startTimeLocal'] = pd.to_datetime(activities_df['startTimeLocal']
 activities_df['Year'] = activities_df['startTimeLocal'].dt.isocalendar().year
 activities_df['Week'] = activities_df['startTimeLocal'].dt.isocalendar().week
 activities_df['YearWeek'] = activities_df['Year'].astype(str) + '-W' + activities_df['Week'].astype(str).str.zfill(2)
-
 
 # Create weekly summary with separate columns for each activity type and metric
 weekly_duration = pd.pivot_table(
@@ -61,18 +64,9 @@ weekly_distance = pd.pivot_table(
 # Combine the duration and distance DataFrames
 weekly_summary = pd.concat([weekly_duration, weekly_distance], axis=1)
 weekly_summary = weekly_summary.fillna(0)
-st.write(weekly_summary.head())
-
-# Create weekly column
-# weekly_summary = activities_df.groupby('activityTypeKey').resample('W').sum()
-# weekly_summary = weekly_summary.unstack(level=0).fillna(0)
-# weekly_summary = weekly_summary.drop(colunms = ['activityTypeKey'])
-
-# Clean up format of table
-# weekly_summary.index = weekly_summary.index.strftime('%Y-%m-%d')
 
 # Display transformed data
-# st.write("Weekly Summed Duration by Activity Type", weekly_summary.head())
+st.write("Weekly Summed Duration by Activity Type", weekly_summary.head())
 
 # Altair Bar Chart
 # chart = alt.Chart(weekly_summary).mark_bar().encode(
@@ -91,16 +85,6 @@ st.write(weekly_summary.head())
 #     layout = "wide"
 #     initial_sidebar = "expanded"
 # }
-
-alt.themes.enable('dark')
-
-# Set up the Streamlit app 
-# st.title("Weekly Activity Duration")
-# st.write("This table displays the weekly summed duration (in minutes) for each activity type.")
-
-# # Display the data as table
-# st.dataframe(weekly_summary)
-
 
 # # Plot
 # sns.barplot(data=activities_df_summed, x='activityTypeKey', y='durationMinutes')
