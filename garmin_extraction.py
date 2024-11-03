@@ -31,7 +31,7 @@ activities_raw = garmin.get_activities_by_date(start_date, today)
 activities_df = pd.DataFrame(activities_raw)
 
 ## Extract relevant columns and data transformation of DF
-activities_df = activities_df[['activityType', 'distance', 'duration', 'startTimeLocal']]
+activities_df = activities_df[['activityType', 'distance', 'duration', 'calories', 'startTimeLocal']]
 activities_df['activityTypeKey'] = activities_df['activityType'].apply(lambda x: x.get('typeKey'))
 activities_df['durationMinutes'] = (activities_df['duration'] % 3600) // 60
 activities_df['distanceMiles'] = (activities_df['distance'] / 1609.344).round(1)
@@ -76,15 +76,24 @@ weekly_distance = pd.pivot_table(
     fill_value=0
 ).add_suffix(' (miles)')
 
+# weekly_calories = pd.pivot_table(
+#     activities_df, 
+#     values='calories',
+#     index='YearWeek',
+#     columns='activityTypeKey',
+#     aggfunc='sum',
+#     fill_value=0
+# ).add_suffix(' (cals)')
+
 # Combine the duration and distance DataFrames
 weekly_summary = pd.concat([weekly_duration, weekly_distance], axis=1)
 weekly_summary = weekly_summary.fillna(0)
 
-## Chart 
+## Distnace Chart
 # Reset index to make YearWeek a column
 weekly_distance_reset = weekly_distance.reset_index()
 
-# Melt pivot into dataframe for Altair
+# Melt pivots into dataframe for Altair
 melted_df = pd.melt(
     weekly_distance_reset, 
     id_vars=['YearWeek'],
@@ -93,7 +102,7 @@ melted_df = pd.melt(
 )
 
 # Line chart
-chart = alt.Chart(melted_df).mark_line(point=True).encode(
+distance_chart = alt.Chart(melted_df).mark_line(point=True).encode(
     x=alt.X('YearWeek:N', title='Week', axis=alt.Axis(labelAngle=-45)),
     y=alt.Y('Distance:Q', title='Distance (miles)'),
     color=alt.Color('Activity:N', title='Activity Type'),
@@ -104,22 +113,28 @@ chart = alt.Chart(melted_df).mark_line(point=True).encode(
     title='Weekly Activity Distance'
 ).interactive()
 
-# Display the chart
-st.altair_chart(chart, use_container_width=True)
+## Calories Chart
+# DF for only Calories data
+weekly_calories = activities_df[['YearWeek', 'activityTypeKey', 'calories']]
+
+# Line chart
+calories_chart = alt.Chart(weekly_calories).mark_bar().encode(
+    x=alt.X('YearWeek:N', title='Week', axis=alt.Axis(labelAngle=-45)),
+    y=alt.Y('calories:Q', title='Calories Burned'),
+    color=alt.Color('activityTypeKey:N', title='Activity Type'),
+    tooltip=['YearWeek', 'activityTypeKey', 'calories']
+).properties(
+    width=800,
+    height=400,
+    title='Weekly Calories Burned by Activity'
+).interactive()
+
+# Display the charts
+st.altair_chart(distance_chart, use_container_width=True)
+st.altair_chart(calories_chart, use_container_width=True)
 
 ## Display Table for Duration / Distance of Activities by Week
 st.write("Weekly Summed Duration by Activity Type", weekly_summary)
-
-# Altair Bar Chart
-# chart = alt.Chart(weekly_summary).mark_bar().encode(
-#     x='startTimeLocal:T',
-#     y='Duration (min):Q',
-#     color='Activity Type:N'
-# ).properties(title="Weekly Activity Duration")
-
-# alt.Chart(weekly_summary)
-
-# st.altair_chart(chart, use_container_width=True)
 
 # st.set_page_config{
 #     page_title = "Weekly Garmin Report"
