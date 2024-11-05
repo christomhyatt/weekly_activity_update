@@ -3,12 +3,19 @@ import garminconnect
 import pandas as pd
 import altair as alt
 import streamlit as st
-from datetime import date
-
-
+from datetime import date, datetime, timedelta
 
 # Set up the Streamlit app 
-st.title("Weekly Garmin Report")
+st.set_page_config(
+    page_title = "Weekly Garmin Report",
+    page_icon = "🤘",
+    layout = "wide",
+    menu_items = {
+        'Get Help': 'https://www.extremelycoolapp.com/help',
+        'Report a bug': "https://www.extremelycoolapp.com/bug",
+        'About': "# This is a header. This is an *extremely* cool app!"
+    }
+)
 alt.themes.enable('dark')
 
 ## Garmin login + credentials; hide before publishing 
@@ -29,6 +36,7 @@ today = date.today()
 ## API call and creatre data frame
 activities_raw = garmin.get_activities_by_date(start_date, today)
 activities_df = pd.DataFrame(activities_raw)
+# st.write("Raw Data: ", activities_df.head())
 
 ## Extract relevant columns and data transformation of DF
 activities_df = activities_df[['activityType', 'distance', 'duration', 'calories', 'startTimeLocal']]
@@ -76,20 +84,11 @@ weekly_distance = pd.pivot_table(
     fill_value=0
 ).add_suffix(' (miles)')
 
-# weekly_calories = pd.pivot_table(
-#     activities_df, 
-#     values='calories',
-#     index='YearWeek',
-#     columns='activityTypeKey',
-#     aggfunc='sum',
-#     fill_value=0
-# ).add_suffix(' (cals)')
-
 # Combine the duration and distance DataFrames
 weekly_summary = pd.concat([weekly_duration, weekly_distance], axis=1)
 weekly_summary = weekly_summary.fillna(0)
 
-## Distnace Chart
+## Distance Chart
 # Reset index to make YearWeek a column
 weekly_distance_reset = weekly_distance.reset_index()
 
@@ -101,7 +100,7 @@ melted_df = pd.melt(
     value_name='Distance'
 )
 
-# Line chart
+# Distance Line chart
 distance_chart = alt.Chart(melted_df).mark_line(point=True).encode(
     x=alt.X('YearWeek:N', title='Week', axis=alt.Axis(labelAngle=-45)),
     y=alt.Y('Distance:Q', title='Distance (miles)'),
@@ -129,25 +128,24 @@ calories_chart = alt.Chart(weekly_calories).mark_bar().encode(
     title='Weekly Calories Burned by Activity'
 ).interactive()
 
+## SUM of miles for the week 
+with st.container():
+    current_week = today.strftime('%Y-W%W')
+    if current_week in weekly_distance.index:
+        current_week_total = weekly_distance.loc[current_week].sum().sum()
+        st.write(f"Miles this week: {round(current_week_total, 2)}.")
+    else:
+        previous_week = (today - timedelta(days=7)).strftime('%Y-W%W')
+        current_week_total = weekly_distance.loc[previous_week].sum().sum()
+        st.write(f"No miles this week. Last week's miles: {round(current_week_total, 2)}.")
+    st.write(f"Last Weeks Total Miles: {round(weekly_distance.loc[(today - timedelta(days=7)).strftime('%Y-W%W')].sum().sum(), 2)}.")
+
 # Display the charts
-st.altair_chart(distance_chart, use_container_width=True)
-st.altair_chart(calories_chart, use_container_width=True)
+col1, col2 = st.columns(2)
+with col1:
+    st.altair_chart(distance_chart, use_container_width=True)
+with col2:
+    st.altair_chart(calories_chart, use_container_width=True)
 
 ## Display Table for Duration / Distance of Activities by Week
 st.write("Weekly Summed Duration by Activity Type", weekly_summary)
-
-# st.set_page_config{
-#     page_title = "Weekly Garmin Report"
-#     page_icon = "🤘"
-#     layout = "wide"
-#     initial_sidebar = "expanded"
-# }
-
-# # Plot
-# sns.barplot(data=activities_df_summed, x='activityTypeKey', y='durationMinutes')
-# plt.xticks(rotation=45)
-# plt.show()
-
-## Get Calories
-# activities_calories = activities_df[['activityName','autoCalcCalories']]
-# print(activities_calories[activities_calories['autoCalcCalories'] == True])
