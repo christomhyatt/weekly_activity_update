@@ -3,7 +3,7 @@ import garminconnect
 import pandas as pd
 import altair as alt
 import streamlit as st
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 # Set up the Streamlit app 
 st.set_page_config(
