@@ -16,6 +16,7 @@ st.set_page_config(
         'About': "# This is a header. This is an *extremely* cool app!"
     }
 )
+st.title("Weekly Garmin Report")
 alt.themes.enable('dark')
 
 ## Garmin login + credentials; hide before publishing 
