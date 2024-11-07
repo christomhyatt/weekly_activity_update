@@ -31,11 +31,14 @@ garmin.login()
 # garmin.garth.dump(GARTH_HOME)
 
 ## Dates for API call
-start_date = st.date_input("Select start date", date(2024,1,1))
 today = date.today()
+with st.container():
+    col1, col2 = st.columns(2)
+    start_date = col1.date_input("Start Date", date(2024,1,1))
+    end_date = col2.date_input("End Date", today)
 
 ## API call and creatre data frame
-activities_raw = garmin.get_activities_by_date(start_date, today)
+activities_raw = garmin.get_activities_by_date(start_date, end_date)
 activities_df = pd.DataFrame(activities_raw)
 # st.write("Raw Data: ", activities_df.head())
 
@@ -83,7 +86,7 @@ weekly_distance = pd.pivot_table(
     columns='activityTypeKey',
     aggfunc='sum',
     fill_value=0
-).add_suffix(' (miles)')
+)
 
 # Combine the duration and distance DataFrames
 weekly_summary = pd.concat([weekly_duration, weekly_distance], axis=1)
@@ -130,7 +133,7 @@ calories_chart = alt.Chart(weekly_calories).mark_bar().encode(
 ).interactive()
 
 ## SUM of miles for the week 
-with st.container():
+with st.container(border=True):
     current_week = today.strftime('%Y-W%W')
     if current_week in weekly_distance.index:
         current_week_total = weekly_distance.loc[current_week].sum().sum()
@@ -142,10 +145,10 @@ with st.container():
     st.write(f"Last Weeks Total Miles: {round(weekly_distance.loc[(today - timedelta(days=7)).strftime('%Y-W%W')].sum().sum(), 2)}.")
 
 # Display the charts
-col1, col2 = st.columns(2)
-with col1:
+col3, col4 = st.columns([3,4])
+with col3:
     st.altair_chart(distance_chart, use_container_width=True)
-with col2:
+with col4:
     st.altair_chart(calories_chart, use_container_width=True)
 
 ## Display Table for Duration / Distance of Activities by Week
